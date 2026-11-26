@@ -79,6 +79,33 @@
     .envelope-wrapper.opened .letter-sheet {
       transform: translateY(-64px);
     }
+    @keyframes snowFallCard {
+      0% { transform: translateY(-12vh) rotate(0deg); opacity: 0; }
+      15% { opacity: 0.95; }
+      100% { transform: translateY(112vh) rotate(360deg); opacity: 0.3; }
+    }
+    @keyframes floatCuteSticker {
+      0%, 100% { transform: translateY(0) rotate(-6deg) scale(1); }
+      50% { transform: translateY(-14px) rotate(8deg) scale(1.08); }
+    }
+    @keyframes bulbTwinkle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(0.82); }
+    }
+    .card-snow-dot {
+      position: absolute;
+      top: -20px;
+      border-radius: 9999px;
+      background: radial-gradient(circle, #ffffff 30%, rgba(255,255,255,0) 70%);
+      pointer-events: none;
+      animation: snowFallCard linear infinite;
+    }
+    .cute-sticker-float {
+      position: absolute;
+      pointer-events: none;
+      filter: drop-shadow(0 6px 12px rgba(244, 114, 182, 0.35));
+      animation: floatCuteSticker ease-in-out infinite;
+    }
   </style>
 </head>
 <body>
@@ -240,81 +267,82 @@
         <input id="viewer-wish-edit-input" type="text" maxlength="140" class="flex-1 px-3 py-1.5 rounded-xl bg-slate-900 border border-white/15 text-xs text-white" placeholder="Sửa lời chúc cho ảnh này..." />
         <button onclick="saveEditedPhotoWish()" class="px-3.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs">Lưu</button>
       </div>
-    </div>
-  </div>
+  <!-- MÀN HÌNH BỨC THƯ GIÁNG SINH XINH XẮN LUNG LINH SẮC MÀU KHI QUÉT MÃ QR -->
+  <div id="qr-splash-screen" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center p-5 overflow-hidden" style="background: radial-gradient(circle at 25% 20%, rgba(244, 114, 182, 0.35) 0%, transparent 45%), radial-gradient(circle at 80% 25%, rgba(56, 189, 248, 0.32) 0%, transparent 48%), radial-gradient(circle at 50% 80%, rgba(250, 204, 21, 0.25) 0%, transparent 50%), linear-gradient(160deg, #1e1035 0%, #130b29 52%, #070514 100%);">
+    <!-- Dải đèn dây sắc màu lung linh phía trên -->
+    <div id="splash-fairy-lights" class="absolute top-0 left-0 right-0 h-10 flex items-center justify-around px-3 pointer-events-none z-20"></div>
 
-  <!-- MODAL 6: XUẤT RIÊNG MÃ QR -->
-  <div id="modal-share" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target===this) closeModal('modal-share')">
-    <div class="glass-panel gold-border rounded-3xl w-full max-w-sm p-5 sm:p-6 text-center">
-      <div class="flex items-center justify-between pb-3 border-b border-white/10">
-        <h2 class="text-lg font-bold text-amber-300">📱 Mã QR Mở Bức Thư Noel</h2>
-        <button onclick="closeModal('modal-share')" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300">✕</button>
-      </div>
-      <p class="text-xs text-slate-300 mt-3 leading-relaxed">
-        Toàn bộ chỉnh sửa đã được lưu! Người nhận chỉ cần quét mã QR này sẽ thấy <strong>bức thư Giáng Sinh riêng</strong>, mở thư ra sẽ vào <strong>cây thông Noel 3D & tự bật nhạc</strong>.
-      </p>
-      <div class="mt-4 flex flex-col items-center">
-        <div class="p-3 bg-white rounded-2xl shadow-xl border-2 border-amber-400/70">
-          <canvas id="qr-card-canvas" width="220" height="220" class="block"></canvas>
-        </div>
-      </div>
-      <div class="mt-4 flex gap-2">
-        <input id="share-url-input" type="text" readonly class="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-white/15 text-xs text-amber-200 select-all" />
-        <button onclick="copyShareUrl()" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:brightness-110">Sao chép</button>
-      </div>
-      <p id="copy-feedback" class="text-xs text-emerald-400 mt-2 hidden">✓ Đã sao chép đường link thành công!</p>
-      <button onclick="downloadQrCardImage()" class="mt-3 w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-bold text-xs sm:text-sm hover:brightness-110 transition">
-        📥 Tải Ảnh Mã QR
-      </button>
-    </div>
-  </div>
+    <!-- Lớp tuyết rơi & sticker Noel bay lơ lửng -->
+    <div id="splash-particles-layer" class="absolute inset-0 pointer-events-none overflow-hidden z-10"></div>
 
+    <!-- Hào quang cầu vồng mềm mại sau bức thư -->
+    <div class="absolute w-[340px] h-[340px] rounded-full blur-3xl opacity-45 pointer-events-none" style="background: conic-gradient(from 45deg, #f472b6, #facc15, #34d399, #38bdf8, #c084fc, #f472b6);"></div>
+
+    <div id="christmas-envelope" onclick="handleEnvelopeClick()" role="button" tabindex="0" class="envelope-wrapper cursor-pointer w-full max-w-[365px] pt-16 select-none relative z-30">
+      <!-- Sticker tai tuần lộc & nơ xinh xắn gắn trên góc phong bì -->
+      <div class="absolute -top-2 -left-3 z-40 text-3xl sm:text-4xl animate-bounce" style="animation-duration: 2.6s;">🦌</div>
+      <div class="absolute -top-2 -right-3 z-40 text-3xl sm:text-4xl animate-bounce" style="animation-duration: 2.2s; animation-delay: 0.4s;">🎅</div>
+
+      <!-- Thân phong bì hồng dâu - đỏ ruby lung linh -->
+      <div class="relative w-full h-[238px] rounded-b-3xl shadow-[0_20px_50px_rgba(244,63,94,0.45)] border-2 border-amber-200/80" style="background: linear-gradient(155deg, #fb7185 0%, #e11d48 52%, #9f1239 100%);">
+        <!-- Tờ giấy thư kem hồng pastel bên trong -->
+        <div class="letter-sheet absolute left-3 right-3 top-3 bottom-3 rounded-2xl text-slate-900 p-4 shadow-xl border-2 border-pink-300 flex flex-col justify-between text-center z-10" style="background: linear-gradient(180deg, #fff1f2 0%, #fffbeb 55%, #fefce8 100%);">
   <!-- MÀN HÌNH BỨC THƯ GIÁNG SINH RIÊNG KHI QUÉT MÃ QR -->
-  <div id="qr-splash-screen" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center p-5" style="background: radial-gradient(circle at 50% 35%, #1e1b4b 0%, #090d1e 62%, #02040a 100%);">
-    <div id="christmas-envelope" onclick="handleEnvelopeClick()" role="button" tabindex="0" class="envelope-wrapper cursor-pointer w-full max-w-[360px] pt-14 select-none">
-      <!-- Thân phong bì -->
-      <div class="relative w-full h-[230px] rounded-b-2xl shadow-2xl border border-amber-400/50" style="background: linear-gradient(160deg, #991b1b 0%, #7f1d1d 100%);">
+  <div id="qr-splash-screen" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center p-5 overflow-hidden" style="background: radial-gradient(circle at 20% 20%, #831843 0%, transparent 45%), radial-gradient(circle at 82% 25%, #1e3a8a 0%, transparent 48%), radial-gradient(circle at 50% 80%, #581c87 0%, #090d1e 72%);">
+    <!-- Dải đèn dây lung linh sắc màu phía trên -->
+    <div id="card-fairy-lights" class="absolute top-0 left-0 right-0 h-14 flex items-center justify-around px-3 pointer-events-none z-10"></div>
+
+    <!-- Lớp tuyết rơi & sticker đáng yêu bay bay -->
+    <div id="card-fx-layer" class="absolute inset-0 pointer-events-none overflow-hidden z-10"></div>
+
+    <div id="christmas-envelope" onclick="handleEnvelopeClick()" role="button" tabindex="0" class="envelope-wrapper cursor-pointer w-full max-w-[360px] pt-16 select-none relative z-20">
+      <!-- Thân phong bì hồng dâu - đỏ ruby lung linh -->
+      <div class="relative w-full h-[238px] rounded-b-3xl shadow-[0_20px_50px_rgba(244,63,94,0.45)] border-2 border-pink-200/70" style="background: linear-gradient(155deg, #fb7185 0%, #e11d48 52%, #be185d 100%);">
+        <!-- Tai tuần lộc & nón Noel trang trí đáng yêu 2 góc phong bì -->
+        <div class="absolute -top-6 left-4 text-3xl drop-shadow-md -rotate-12 pointer-events-none z-40">🦌</div>
+        <div class="absolute -top-6 right-4 text-3xl drop-shadow-md rotate-12 pointer-events-none z-40">🎅</div>
+
         <!-- Tờ giấy thư bên trong -->
-        <div class="letter-sheet absolute left-3 right-3 top-3 bottom-3 rounded-xl bg-amber-50 text-slate-900 p-4 shadow-lg border border-amber-300 flex flex-col justify-between text-center z-10">
+        <div class="letter-sheet absolute left-3 right-3 top-3 bottom-3 rounded-2xl text-slate-900 p-4 shadow-xl border-2 border-pink-300 flex flex-col justify-between text-center z-10" style="background: linear-gradient(180deg, #fff1f2 0%, #fffbeb 55%, #fdf2f8 100%);">
           <div>
-            <div class="text-[10px] font-bold uppercase tracking-[0.22em] text-rose-700">Gửi Riêng Cho Bạn • Noel</div>
-            <div class="font-vibes text-2xl sm:text-3xl text-rose-800 mt-0.5">Merry Christmas</div>
+            <div class="inline-block px-2.5 py-0.5 rounded-full bg-pink-200/80 text-[10px] font-bold uppercase tracking-[0.2em] text-rose-700">✨ Gửi Riêng Cho Bạn ✨</div>
+            <div class="font-vibes text-2xl sm:text-3xl bg-gradient-to-r from-rose-600 via-pink-500 to-amber-500 bg-clip-text text-transparent mt-0.5">Merry Christmas</div>
           </div>
-          <p id="splash-greeting-quote" class="font-serif-luxury italic text-base sm:text-lg text-slate-800 leading-snug line-clamp-3 px-1">
+          <p id="splash-greeting-quote" class="font-serif-luxury italic text-base sm:text-lg text-rose-950 font-semibold leading-snug line-clamp-3 px-1">
             Chúc bạn một mùa Giáng Sinh an lành, ấm áp và tràn ngập niềm vui!
           </p>
-          <div class="text-[11px] font-bold text-amber-700">
-            ✨ Chạm vào bức thư để mở cây thông 3D ✨
+          <div class="text-[11px] font-bold text-pink-600">
+            🎀 Chạm vào bức thư để mở cây thông 3D 🎄
           </div>
         </div>
 
         <!-- Nắp tam giác dưới & hai bên phong bì -->
-        <div class="absolute inset-0 z-20 pointer-events-none rounded-b-2xl overflow-hidden">
-          <svg viewBox="0 0 360 230" preserveAspectRatio="none" class="w-full h-full">
-            <polygon points="0,0 180,122 0,230" fill="#b91c1c" />
-            <polygon points="360,0 180,122 360,230" fill="#991b1b" />
-            <polygon points="0,230 180,112 360,230" fill="#dc2626" />
-            <polyline points="0,230 180,112 360,230" fill="none" stroke="#fbbf24" stroke-width="2" stroke-opacity="0.65" />
+        <div class="absolute inset-0 z-20 pointer-events-none rounded-b-3xl overflow-hidden">
+          <svg viewBox="0 0 360 238" preserveAspectRatio="none" class="w-full h-full">
+            <polygon points="0,0 180,126 0,238" fill="#f43f5e" />
+            <polygon points="360,0 180,126 360,238" fill="#e11d48" />
+            <polygon points="0,238 180,116 360,238" fill="#fb7185" />
+            <polyline points="0,238 180,116 360,238" fill="none" stroke="#fef08a" stroke-width="2.5" stroke-opacity="0.85" />
           </svg>
         </div>
 
         <!-- Nắp gập trên phong bì -->
-        <div class="envelope-flap absolute top-0 left-0 right-0 h-[126px] z-30 pointer-events-none">
-          <svg viewBox="0 0 360 126" preserveAspectRatio="none" class="w-full h-full drop-shadow-md">
-            <polygon points="0,0 360,0 180,124" fill="#ef4444" />
-            <polyline points="0,0 180,124 360,0" fill="none" stroke="#fde047" stroke-width="2.5" />
+        <div class="envelope-flap absolute top-0 left-0 right-0 h-[130px] z-30 pointer-events-none">
+          <svg viewBox="0 0 360 130" preserveAspectRatio="none" class="w-full h-full drop-shadow-md">
+            <polygon points="0,0 360,0 180,128" fill="#fda4af" />
+            <polyline points="0,0 180,128 360,0" fill="none" stroke="#fef08a" stroke-width="3" />
           </svg>
         </div>
 
-        <!-- Con dấu sáp vàng giữa phong bì -->
-        <div id="wax-seal-badge" class="absolute left-1/2 top-[112px] -translate-x-1/2 -translate-y-1/2 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-amber-300 via-yellow-500 to-amber-700 border-2 border-amber-200 shadow-xl flex items-center justify-center text-2xl transition-opacity duration-300">
+        <!-- Con dấu sáp vàng ánh hồng giữa phong bì -->
+        <div id="wax-seal-badge" class="absolute left-1/2 top-[116px] -translate-x-1/2 -translate-y-1/2 z-40 w-15 h-15 p-3 rounded-full bg-gradient-to-br from-pink-200 via-amber-300 to-rose-500 border-2 border-white shadow-[0_0_25px_rgba(253,224,71,0.85)] flex items-center justify-center text-2xl transition-opacity duration-300">
           🎄
         </div>
       </div>
     </div>
 
-    <p id="envelope-instruction" class="mt-6 text-xs sm:text-sm text-amber-200 font-medium tracking-wide animate-pulse text-center">
-      💌 Chạm vào phong bì để mở bức thư Giáng Sinh
+    <p id="envelope-instruction" class="mt-6 text-xs sm:text-sm text-pink-200 font-semibold tracking-wide animate-pulse text-center relative z-20 drop-shadow">
+      💌 Chạm vào phong bì xinh xắn để mở bức thư Giáng Sinh ✨
     </p>
   </div>
 
@@ -576,7 +604,65 @@
         } catch (e) {}
       }
       document.getElementById('splash-greeting-quote').textContent = greetingText;
+      buildCuteSplashDecorations();
       document.getElementById('qr-splash-screen').classList.remove('hidden');
+    }
+
+    function buildCuteSplashDecorations() {
+      const lightsWrap = document.getElementById('card-fairy-lights');
+      if (lightsWrap && !lightsWrap.hasChildNodes()) {
+        const bulbColors = ['#ff6b9d', '#fde047', '#34d399', '#60a5fa', '#c084fc', '#fb923c'];
+        for (let i = 0; i < 14; i++) {
+          const bulb = document.createElement('span');
+          const c = bulbColors[i % bulbColors.length];
+          bulb.className = 'w-3.5 h-4 rounded-full inline-block';
+          bulb.style.backgroundColor = c;
+          bulb.style.boxShadow = `0 0 14px 4px ${c}`;
+          bulb.style.animation = `bulbTwinkle ${1.1 + (i % 4) * 0.35}s ease-in-out ${(i * 0.18).toFixed(2)}s infinite`;
+          lightsWrap.appendChild(bulb);
+        }
+      }
+
+      const fxLayer = document.getElementById('card-fx-layer');
+      if (fxLayer && !fxLayer.hasChildNodes()) {
+        // Tuyết rơi lung linh
+        for (let i = 0; i < 36; i++) {
+          const dot = document.createElement('span');
+          dot.className = 'card-snow-dot';
+          const size = 4 + (i % 5) * 2.2;
+          dot.style.width = size + 'px';
+          dot.style.height = size + 'px';
+          dot.style.left = ((i * 29) % 100) + '%';
+          dot.style.animationDuration = (4.5 + (i % 6) * 1.1) + 's';
+          dot.style.animationDelay = (-(i * 0.45)) + 's';
+          fxLayer.appendChild(dot);
+        }
+
+        // Các sticker Noel đáng yêu bay bổng xung quanh thiệp
+        const cuteStickers = [
+          { em: '⛄', left: '7%', top: '16%', size: '2rem', dur: '3.6s' },
+          { em: '🎁', left: '84%', top: '18%', size: '2rem', dur: '4.1s' },
+          { em: '🔔', left: '12%', top: '76%', size: '1.85rem', dur: '3.8s' },
+          { em: '🧸', left: '82%', top: '74%', size: '2.1rem', dur: '4.3s' },
+          { em: '🍭', left: '6%', top: '46%', size: '1.75rem', dur: '3.4s' },
+          { em: '🎀', left: '87%', top: '47%', size: '1.85rem', dur: '3.9s' },
+          { em: '🌟', left: '24%', top: '12%', size: '1.65rem', dur: '3.2s' },
+          { em: '🍪', left: '72%', top: '13%', size: '1.65rem', dur: '3.7s' },
+          { em: '🧦', left: '22%', top: '85%', size: '1.75rem', dur: '4.0s' },
+          { em: '🦌', left: '73%', top: '84%', size: '1.9rem', dur: '3.5s' }
+        ];
+        cuteStickers.forEach((st, idx) => {
+          const el = document.createElement('span');
+          el.className = 'cute-sticker-float';
+          el.textContent = st.em;
+          el.style.left = st.left;
+          el.style.top = st.top;
+          el.style.fontSize = st.size;
+          el.style.animationDuration = st.dur;
+          el.style.animationDelay = (idx * 0.25) + 's';
+          fxLayer.appendChild(el);
+        });
+      }
     }
 
     function openTreeFromSplashCard() {
@@ -614,6 +700,7 @@
 
     function renderQrGreetingCard(targetUrl) {
       const canvas = document.getElementById('qr-card-canvas');
+      const noteEl = document.getElementById('qr-limit-note');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       const size = canvas.width;
@@ -637,7 +724,28 @@
               }
             }
           }
-        } catch (err) {}
+          if (noteEl) noteEl.classList.add('hidden');
+        } catch (err) {
+          // Nếu link quá dài do chứa nhiều ảnh, tạo mã QR dự phòng trỏ tới bản không nhúng ảnh nặng
+          try {
+            const fallbackUrl = targetUrl.split('&p=')[0];
+            const qrFallback = qrcode(0, 'L');
+            qrFallback.addData(fallbackUrl);
+            qrFallback.make();
+            const count = qrFallback.getModuleCount();
+            const pad = 10;
+            const cell = (size - pad * 2) / count;
+            ctx.fillStyle = '#0f172a';
+            for (let r = 0; r < count; r++) {
+              for (let c = 0; c < count; c++) {
+                if (qrFallback.isDark(r, c)) {
+                  ctx.fillRect(pad + c * cell, pad + r * cell, Math.ceil(cell), Math.ceil(cell));
+                }
+              }
+            }
+          } catch (e2) {}
+          if (noteEl) noteEl.classList.remove('hidden');
+        }
       }
     }
 
@@ -1673,28 +1781,45 @@
       const activeWishes = wishTexts.filter(t => t && t.trim().length > 0).slice(0, 10);
       activeWishes.forEach((text, idx) => {
         const canvas = document.createElement('canvas');
-        canvas.width = 420;
-        canvas.height = 110;
+        canvas.width = 760;
+        canvas.height = 170;
         const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-        ctx.beginPath();
-        ctx.roundRect(6, 6, 408, 98, 24);
-        ctx.fill();
-        ctx.strokeStyle = '#fbbf24';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-
-        ctx.fillStyle = '#fef3c7';
-        ctx.font = 'bold 22px Georgia';
+        const display = text.length > 36 ? text.slice(0, 34) + '…' : text;
+        ctx.font = 'italic 700 44px "Cormorant Garamond", Georgia, serif';
         ctx.textAlign = 'center';
-        const display = text.length > 34 ? text.slice(0, 32) + '…' : text;
-        ctx.fillText(display, 210, 62);
+        ctx.textBaseline = 'middle';
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+
+        // Lớp 1: Hào quang hồng neon tỏa sáng bên ngoài từng nét chữ
+        ctx.save();
+        ctx.shadowColor = '#ff2e93';
+        ctx.shadowBlur = 26;
+        ctx.strokeStyle = '#ff4da6';
+        ctx.lineWidth = 11;
+        ctx.strokeText(display, canvas.width / 2, canvas.height / 2);
+        ctx.restore();
+
+        // Lớp 2: Viền hồng sáng ôm sát nét chữ
+        ctx.save();
+        ctx.shadowColor = '#ff85c2';
+        ctx.shadowBlur = 10;
+        ctx.strokeStyle = '#ff77bc';
+        ctx.lineWidth = 5;
+        ctx.strokeText(display, canvas.width / 2, canvas.height / 2);
+        ctx.restore();
+
+        // Lớp 3: Lõi chữ trắng hồng lấp lánh sắc nét
+        ctx.fillStyle = '#fff5fa';
+        ctx.fillText(display, canvas.width / 2, canvas.height / 2);
 
         const tex = new THREE.CanvasTexture(canvas);
+        tex.needsUpdate = true;
         const mesh = new THREE.Mesh(
-          new THREE.PlaneGeometry(2.35, 0.62),
-          new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide })
+          new THREE.PlaneGeometry(3.4, 0.76),
+          new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide })
         );
 
         mesh.userData = { type: 'wish', text };
@@ -2157,25 +2282,33 @@
         return;
       }
       files.slice(0, remaining).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = ev => {
-          addPhotoFrameToTree(ev.target.result, customWish || 'Chúc mừng Giáng Sinh an lành! ✨');
+        compressImageForSharing(file, compressedDataUrl => {
+          addPhotoFrameToTree(compressedDataUrl, customWish || 'Chúc mừng Giáng Sinh an lành! ✨');
           setTimeout(renderPhotoListPreview, 250);
-        };
-        reader.readAsDataURL(file);
+        });
       });
       e.target.value = '';
     });
 
-    function setPresetBackground(preset, skipSave = false) {
-      currentBgPreset = preset || 'night';
-      const bg = document.getElementById('bg-layer');
-      bg.style.backgroundImage = 'none';
-      if (currentBgPreset === 'night') bg.style.background = 'radial-gradient(circle at 50% 42%, #0c1936 0%, #050a18 58%, #02040a 100%)';
-      if (currentBgPreset === 'warm') bg.style.background = 'radial-gradient(circle at 50% 45%, #451a03 0%, #1c0a00 62%, #090300 100%)';
-      if (currentBgPreset === 'aurora') bg.style.background = 'radial-gradient(circle at 50% 35%, #064e3b 0%, #022c22 52%, #020617 100%)';
-      if (currentBgPreset === 'royal') bg.style.background = 'radial-gradient(circle at 50% 42%, #4c0519 0%, #1f030d 60%, #070104 100%)';
-      if (!skipSave) saveStateToLocal();
+    function compressImageForSharing(file, callback) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          const maxSide = 220;
+          const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          callback(canvas.toDataURL('image/jpeg', 0.62));
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
     }
 
     document.getElementById('bg-upload').addEventListener('change', e => {
@@ -2189,6 +2322,17 @@
       };
       reader.readAsDataURL(file);
     });
+
+    function setPresetBackground(preset, silent) {
+      currentBgPreset = preset || 'night';
+      const bg = document.getElementById('bg-layer');
+      bg.style.backgroundImage = 'none';
+      if (preset === 'night') bg.style.background = 'radial-gradient(circle at 50% 42%, #0c1936 0%, #050a18 58%, #02040a 100%)';
+      if (preset === 'warm') bg.style.background = 'radial-gradient(circle at 50% 45%, #451a03 0%, #1c0a00 62%, #090300 100%)';
+      if (preset === 'aurora') bg.style.background = 'radial-gradient(circle at 50% 35%, #064e3b 0%, #022c22 52%, #020617 100%)';
+      if (preset === 'royal') bg.style.background = 'radial-gradient(circle at 50% 42%, #4c0519 0%, #1f030d 60%, #070104 100%)';
+      if (!silent) saveStateToLocal();
+    }
 
     document.getElementById('bg-dim-slider').addEventListener('input', e => {
       const v = e.target.value;
@@ -2278,6 +2422,10 @@
           if (typeof decoded.b === 'string') {
             setPresetBackground(decoded.b, true);
           }
+          if (Array.isArray(decoded.p) && decoded.p.length) {
+            decoded.p.forEach(item => addPhotoFrameToTree(item.u, item.w));
+            loadedPhotos = true;
+          }
         }
       } else {
         try {
@@ -2332,11 +2480,17 @@
     document.getElementById('btn-share-link').addEventListener('click', () => {
       saveStateToLocal();
       const base = window.location.href.split('?')[0];
+      const customPhotos = photoFrames
+        .filter(p => p.imageUrl && p.imageUrl.startsWith('data:image/jpeg'))
+        .slice(0, 4)
+        .map(p => ({ u: p.imageUrl, w: p.wish }));
+
       const payload = {
         w: wishTexts.filter(w => w && w.trim().length > 0),
         s: treeStickers.map(s => s.emoji),
         t: currentThemeIndex,
-        b: currentBgPreset
+        b: currentBgPreset,
+        p: customPhotos
       };
       const encoded = encodePayloadForUrl(payload);
       const viewUrl = encoded ? `${base}?view=1&card=1&d=${encoded}` : `${base}?view=1&card=1`;
@@ -2344,7 +2498,7 @@
       document.getElementById('copy-feedback').classList.add('hidden');
       renderQrGreetingCard(viewUrl);
       openModal('modal-share');
-      showToast('Đã lưu chỉnh sửa & xuất thiệp kèm mã QR!');
+      showToast('Đã lưu chỉnh sửa & xuất bức thư kèm mã QR!');
     });
 
     function copyShareUrl() {
