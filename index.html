@@ -267,26 +267,38 @@
         <input id="viewer-wish-edit-input" type="text" maxlength="140" class="flex-1 px-3 py-1.5 rounded-xl bg-slate-900 border border-white/15 text-xs text-white" placeholder="Sửa lời chúc cho ảnh này..." />
         <button onclick="saveEditedPhotoWish()" class="px-3.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs">Lưu</button>
       </div>
-  <!-- MÀN HÌNH BỨC THƯ GIÁNG SINH XINH XẮN LUNG LINH SẮC MÀU KHI QUÉT MÃ QR -->
-  <div id="qr-splash-screen" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center p-5 overflow-hidden" style="background: radial-gradient(circle at 25% 20%, rgba(244, 114, 182, 0.35) 0%, transparent 45%), radial-gradient(circle at 80% 25%, rgba(56, 189, 248, 0.32) 0%, transparent 48%), radial-gradient(circle at 50% 80%, rgba(250, 204, 21, 0.25) 0%, transparent 50%), linear-gradient(160deg, #1e1035 0%, #130b29 52%, #070514 100%);">
-    <!-- Dải đèn dây sắc màu lung linh phía trên -->
-    <div id="splash-fairy-lights" class="absolute top-0 left-0 right-0 h-10 flex items-center justify-around px-3 pointer-events-none z-20"></div>
+    </div>
+  </div>
 
-    <!-- Lớp tuyết rơi & sticker Noel bay lơ lửng -->
-    <div id="splash-particles-layer" class="absolute inset-0 pointer-events-none overflow-hidden z-10"></div>
+  <!-- MODAL 6: XUẤT MÃ QR & LINK CHỈ-XEM -->
+  <div id="modal-share" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target===this) closeModal('modal-share')">
+    <div class="glass-panel gold-border rounded-3xl w-full max-w-md p-5 sm:p-6 text-center">
+      <div class="flex items-center justify-between pb-3 border-b border-white/10">
+        <h2 class="text-lg font-bold text-emerald-300">📱 Mã QR & Link Bức Thư Noel</h2>
+        <button onclick="closeModal('modal-share')" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300">✕</button>
+      </div>
+      <p class="text-xs text-slate-300 mt-3 leading-relaxed">
+        Quét mã QR hoặc mở link bên dưới để hiện <strong>bức thư Giáng Sinh lung linh sắc màu</strong>. Chạm mở thư sẽ vào cây thông 3D của bạn và tự phát nhạc!
+      </p>
+      <div class="mt-4 flex flex-col items-center">
+        <div class="p-3 rounded-2xl bg-white shadow-xl border-2 border-amber-300">
+          <canvas id="qr-card-canvas" width="220" height="220" class="block rounded-lg"></canvas>
+        </div>
+        <button onclick="downloadQrCardImage()" class="mt-3 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-bold text-xs hover:brightness-110 transition">
+          ⬇️ Tải ảnh mã QR về máy
+        </button>
+        <p id="qr-limit-note" class="hidden text-[11px] text-amber-300 mt-2">
+          * Do có nhiều ảnh nên mã QR đã tối ưu gọn nhẹ; bạn cũng có thể gửi kèm link đầy đủ bên dưới.
+        </p>
+      </div>
+      <div class="mt-4 flex gap-2">
+        <input id="share-url-input" type="text" readonly class="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-white/15 text-xs text-amber-200 select-all" />
+        <button onclick="copyShareUrl()" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:brightness-110">Sao chép</button>
+      </div>
+      <p id="copy-feedback" class="text-xs text-emerald-400 mt-2 hidden">✓ Đã sao chép đường link thành công!</p>
+    </div>
+  </div>
 
-    <!-- Hào quang cầu vồng mềm mại sau bức thư -->
-    <div class="absolute w-[340px] h-[340px] rounded-full blur-3xl opacity-45 pointer-events-none" style="background: conic-gradient(from 45deg, #f472b6, #facc15, #34d399, #38bdf8, #c084fc, #f472b6);"></div>
-
-    <div id="christmas-envelope" onclick="handleEnvelopeClick()" role="button" tabindex="0" class="envelope-wrapper cursor-pointer w-full max-w-[365px] pt-16 select-none relative z-30">
-      <!-- Sticker tai tuần lộc & nơ xinh xắn gắn trên góc phong bì -->
-      <div class="absolute -top-2 -left-3 z-40 text-3xl sm:text-4xl animate-bounce" style="animation-duration: 2.6s;">🦌</div>
-      <div class="absolute -top-2 -right-3 z-40 text-3xl sm:text-4xl animate-bounce" style="animation-duration: 2.2s; animation-delay: 0.4s;">🎅</div>
-
-      <!-- Thân phong bì hồng dâu - đỏ ruby lung linh -->
-      <div class="relative w-full h-[238px] rounded-b-3xl shadow-[0_20px_50px_rgba(244,63,94,0.45)] border-2 border-amber-200/80" style="background: linear-gradient(155deg, #fb7185 0%, #e11d48 52%, #9f1239 100%);">
-        <!-- Tờ giấy thư kem hồng pastel bên trong -->
-        <div class="letter-sheet absolute left-3 right-3 top-3 bottom-3 rounded-2xl text-slate-900 p-4 shadow-xl border-2 border-pink-300 flex flex-col justify-between text-center z-10" style="background: linear-gradient(180deg, #fff1f2 0%, #fffbeb 55%, #fefce8 100%);">
   <!-- MÀN HÌNH BỨC THƯ GIÁNG SINH RIÊNG KHI QUÉT MÃ QR -->
   <div id="qr-splash-screen" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center p-5 overflow-hidden" style="background: radial-gradient(circle at 20% 20%, #831843 0%, transparent 45%), radial-gradient(circle at 82% 25%, #1e3a8a 0%, transparent 48%), radial-gradient(circle at 50% 80%, #581c87 0%, #090d1e 72%);">
     <!-- Dải đèn dây lung linh sắc màu phía trên -->
