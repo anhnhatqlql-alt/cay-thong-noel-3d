@@ -6,6 +6,7 @@
   <title>Cây Thông Noel 3D Lấp Lánh</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Great+Vibes&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -58,6 +59,26 @@
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.4); border-radius: 99px; }
     ::-webkit-scrollbar-thumb { background: rgba(250, 204, 21, 0.45); border-radius: 99px; }
+
+    /* Hiệu ứng phong bì bức thư Giáng Sinh khi quét QR */
+    .envelope-wrapper {
+      perspective: 1100px;
+    }
+    .envelope-flap {
+      transform-origin: top center;
+      transition: transform 0.65s cubic-bezier(0.34, 1.56, 0.64, 1);
+      backface-visibility: hidden;
+    }
+    .envelope-wrapper.opened .envelope-flap {
+      transform: rotateX(180deg);
+      z-index: 1;
+    }
+    .letter-sheet {
+      transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.22s;
+    }
+    .envelope-wrapper.opened .letter-sheet {
+      transform: translateY(-64px);
+    }
   </style>
 </head>
 <body>
@@ -81,7 +102,7 @@
 
     <div class="flex items-center gap-2 pointer-events-auto">
       <button id="btn-share-link" class="edit-only glass-panel gold-border px-3.5 py-2 rounded-full text-xs sm:text-sm font-semibold text-emerald-300 hover:bg-emerald-500/20 transition flex items-center gap-1.5">
-        <span>🔗</span> <span>Xuất Link</span>
+        <span>📱</span> <span>Xuất Mã QR</span>
       </button>
       <button id="btn-toggle-hud" class="glass-panel px-3.5 py-2 rounded-full text-xs sm:text-sm font-medium text-slate-200 hover:bg-white/10 transition flex items-center gap-1.5">
         <span>👁️</span> <span id="hud-label">Ngắm toàn cảnh</span>
@@ -222,22 +243,79 @@
     </div>
   </div>
 
-  <!-- MODAL 6: XUẤT LINK CHỈ-XEM -->
+  <!-- MODAL 6: XUẤT RIÊNG MÃ QR -->
   <div id="modal-share" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target===this) closeModal('modal-share')">
-    <div class="glass-panel gold-border rounded-3xl w-full max-w-md p-5 sm:p-6">
+    <div class="glass-panel gold-border rounded-3xl w-full max-w-sm p-5 sm:p-6 text-center">
       <div class="flex items-center justify-between pb-3 border-b border-white/10">
-        <h2 class="text-lg font-bold text-emerald-300">🔗 Link Cây Thông Chỉ-Xem</h2>
+        <h2 class="text-lg font-bold text-amber-300">📱 Mã QR Mở Bức Thư Noel</h2>
         <button onclick="closeModal('modal-share')" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300">✕</button>
       </div>
       <p class="text-xs text-slate-300 mt-3 leading-relaxed">
-        Khi người nhận mở đường link bên dưới, <strong>toàn bộ nút chỉnh sửa sẽ được ẩn hoàn toàn</strong> — họ chỉ ngắm cây thông 3D xoay 360°, nghe nhạc và chạm vào ảnh/thiệp lời chúc của bạn!
+        Toàn bộ chỉnh sửa đã được lưu! Người nhận chỉ cần quét mã QR này sẽ thấy <strong>bức thư Giáng Sinh riêng</strong>, mở thư ra sẽ vào <strong>cây thông Noel 3D & tự bật nhạc</strong>.
       </p>
-      <div class="mt-3 flex gap-2">
+      <div class="mt-4 flex flex-col items-center">
+        <div class="p-3 bg-white rounded-2xl shadow-xl border-2 border-amber-400/70">
+          <canvas id="qr-card-canvas" width="220" height="220" class="block"></canvas>
+        </div>
+      </div>
+      <div class="mt-4 flex gap-2">
         <input id="share-url-input" type="text" readonly class="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-white/15 text-xs text-amber-200 select-all" />
         <button onclick="copyShareUrl()" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:brightness-110">Sao chép</button>
       </div>
       <p id="copy-feedback" class="text-xs text-emerald-400 mt-2 hidden">✓ Đã sao chép đường link thành công!</p>
+      <button onclick="downloadQrCardImage()" class="mt-3 w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-bold text-xs sm:text-sm hover:brightness-110 transition">
+        📥 Tải Ảnh Mã QR
+      </button>
     </div>
+  </div>
+
+  <!-- MÀN HÌNH BỨC THƯ GIÁNG SINH RIÊNG KHI QUÉT MÃ QR -->
+  <div id="qr-splash-screen" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center p-5" style="background: radial-gradient(circle at 50% 35%, #1e1b4b 0%, #090d1e 62%, #02040a 100%);">
+    <div id="christmas-envelope" onclick="handleEnvelopeClick()" role="button" tabindex="0" class="envelope-wrapper cursor-pointer w-full max-w-[360px] pt-14 select-none">
+      <!-- Thân phong bì -->
+      <div class="relative w-full h-[230px] rounded-b-2xl shadow-2xl border border-amber-400/50" style="background: linear-gradient(160deg, #991b1b 0%, #7f1d1d 100%);">
+        <!-- Tờ giấy thư bên trong -->
+        <div class="letter-sheet absolute left-3 right-3 top-3 bottom-3 rounded-xl bg-amber-50 text-slate-900 p-4 shadow-lg border border-amber-300 flex flex-col justify-between text-center z-10">
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-[0.22em] text-rose-700">Gửi Riêng Cho Bạn • Noel</div>
+            <div class="font-vibes text-2xl sm:text-3xl text-rose-800 mt-0.5">Merry Christmas</div>
+          </div>
+          <p id="splash-greeting-quote" class="font-serif-luxury italic text-base sm:text-lg text-slate-800 leading-snug line-clamp-3 px-1">
+            Chúc bạn một mùa Giáng Sinh an lành, ấm áp và tràn ngập niềm vui!
+          </p>
+          <div class="text-[11px] font-bold text-amber-700">
+            ✨ Chạm vào bức thư để mở cây thông 3D ✨
+          </div>
+        </div>
+
+        <!-- Nắp tam giác dưới & hai bên phong bì -->
+        <div class="absolute inset-0 z-20 pointer-events-none rounded-b-2xl overflow-hidden">
+          <svg viewBox="0 0 360 230" preserveAspectRatio="none" class="w-full h-full">
+            <polygon points="0,0 180,122 0,230" fill="#b91c1c" />
+            <polygon points="360,0 180,122 360,230" fill="#991b1b" />
+            <polygon points="0,230 180,112 360,230" fill="#dc2626" />
+            <polyline points="0,230 180,112 360,230" fill="none" stroke="#fbbf24" stroke-width="2" stroke-opacity="0.65" />
+          </svg>
+        </div>
+
+        <!-- Nắp gập trên phong bì -->
+        <div class="envelope-flap absolute top-0 left-0 right-0 h-[126px] z-30 pointer-events-none">
+          <svg viewBox="0 0 360 126" preserveAspectRatio="none" class="w-full h-full drop-shadow-md">
+            <polygon points="0,0 360,0 180,124" fill="#ef4444" />
+            <polyline points="0,0 180,124 360,0" fill="none" stroke="#fde047" stroke-width="2.5" />
+          </svg>
+        </div>
+
+        <!-- Con dấu sáp vàng giữa phong bì -->
+        <div id="wax-seal-badge" class="absolute left-1/2 top-[112px] -translate-x-1/2 -translate-y-1/2 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-amber-300 via-yellow-500 to-amber-700 border-2 border-amber-200 shadow-xl flex items-center justify-center text-2xl transition-opacity duration-300">
+          🎄
+        </div>
+      </div>
+    </div>
+
+    <p id="envelope-instruction" class="mt-6 text-xs sm:text-sm text-amber-200 font-medium tracking-wide animate-pulse text-center">
+      💌 Chạm vào phong bì để mở bức thư Giáng Sinh
+    </p>
   </div>
 
   <!-- Thông báo nổi (Toast) thay thế alert() -->
@@ -249,6 +327,7 @@
     // =========================================================================
     const urlParams = new URLSearchParams(window.location.search);
     const isViewOnlyMode = urlParams.get('view') === '1';
+    const isGreetingEntryMode = isViewOnlyMode && urlParams.get('card') === '1';
 
     let scene, camera, renderer;
     let treeParticleSystem, ribbonParticleSystem, starGroup, starLight;
@@ -272,7 +351,7 @@
     let previousMouse = { x: 0, y: 0 };
     let targetAzimuth = 0;
     let currentAzimuth = 0;
-    let targetPolar = 1.42; // 0.08 rad (nhìn thẳng từ đỉnh) -> 1.82 rad (ngang tầm gốc)
+    let targetPolar = 1.42;
     let currentPolar = 1.42;
     let targetDistance = 19.0;
     let currentDistance = 19.0;
@@ -280,7 +359,9 @@
 
     let clock = new THREE.Clock();
     let currentThemeIndex = 0;
+    let currentBgPreset = 'night';
     let activeViewingPhotoIndex = -1;
+    let isEnvelopeOpened = false;
 
     const COLOR_THEMES = [
       {
@@ -336,7 +417,6 @@
       document.getElementById(id).classList.add('hidden');
     }
 
-    // Thay thế CapsuleGeometry (chưa có trong Three.js r128)
     function createCapsuleMesh(radius, length, material) {
       const group = new THREE.Group();
       const cyl = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, length, 14), material);
@@ -381,7 +461,7 @@
       ctx.beginPath();
       for (let i = 0; i < 5; i++) {
         const a1 = (i * 4 * Math.PI) / 5 - Math.PI / 2;
-        const r = i === 0 ? 18 : 18;
+        const r = 18;
         if (i === 0) ctx.moveTo(Math.cos(a1) * r, Math.sin(a1) * r);
         else ctx.lineTo(Math.cos(a1) * r, Math.sin(a1) * r);
       }
@@ -391,11 +471,14 @@
     }
 
     // =========================================================================
-    // 3. KHỞI TẠO CẢNH 3D & ÁNH SÁNG
+    // 3. KHỞI TẠO CẢNH 3D, MÃ HÓA DỮ LIỆU QR & THIỆP MỞ ĐẦU
     // =========================================================================
     function initScene() {
       if (isViewOnlyMode) {
         document.querySelectorAll('.edit-only').forEach(el => el.classList.add('hidden'));
+      }
+      if (isGreetingEntryMode) {
+        setupGreetingSplashScreen();
       }
 
       const container = document.getElementById('canvas-container');
@@ -412,7 +495,6 @@
       renderer.toneMappingExposure = 1.15;
       container.appendChild(renderer.domElement);
 
-      // Hệ thống đèn chiếu sáng tiểu cảnh
       const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.65);
       scene.add(ambientLight);
 
@@ -424,7 +506,6 @@
       rimLight.position.set(-10, 8, -8);
       scene.add(rimLight);
 
-      // Dựng toàn bộ các thành phần 3D
       buildTreeParticles();
       build3DStarTopper();
       buildSnowGroundAndProps();
@@ -436,18 +517,147 @@
       loadSavedStateOrDefaults();
       setupCameraControls();
 
+      if (isViewOnlyMode && !isGreetingEntryMode) {
+        enableChristmasMusic();
+      }
+
       window.addEventListener('resize', onWindowResize);
       animate();
     }
 
+    function encodePayloadForUrl(payloadObj) {
+      try {
+        const json = JSON.stringify(payloadObj);
+        const bytes = new TextEncoder().encode(json);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function decodePayloadFromUrl(encodedStr) {
+      try {
+        let base64 = encodedStr.replace(/-/g, '+').replace(/_/g, '/');
+        while (base64.length % 4) base64 += '=';
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return JSON.parse(new TextDecoder().decode(bytes));
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function setupGreetingSplashScreen() {
+      let greetingText = wishTexts[0] || 'Chúc bạn một mùa Giáng Sinh an lành, ấm áp và tràn ngập niềm vui!';
+      const encodedData = urlParams.get('d');
+      if (encodedData) {
+        const decoded = decodePayloadFromUrl(encodedData);
+        if (decoded && Array.isArray(decoded.w)) {
+          const firstWish = decoded.w.find(w => w && w.trim().length > 0);
+          if (firstWish) greetingText = firstWish;
+        }
+      } else {
+        try {
+          const raw = localStorage.getItem('noel_3d_state_v1');
+          if (raw) {
+            const st = JSON.parse(raw);
+            if (Array.isArray(st.wishes)) {
+              const firstLocal = st.wishes.find(w => w && w.trim().length > 0);
+              if (firstLocal) greetingText = firstLocal;
+            }
+          }
+        } catch (e) {}
+      }
+      document.getElementById('splash-greeting-quote').textContent = greetingText;
+      document.getElementById('qr-splash-screen').classList.remove('hidden');
+    }
+
+    function openTreeFromSplashCard() {
+      const splash = document.getElementById('qr-splash-screen');
+      splash.style.transition = 'opacity 0.45s ease';
+      splash.style.opacity = '0';
+      setTimeout(() => splash.classList.add('hidden'), 450);
+      enableChristmasMusic();
+    }
+
+    function handleEnvelopeClick() {
+      const envelope = document.getElementById('christmas-envelope');
+      if (!isEnvelopeOpened) {
+        isEnvelopeOpened = true;
+        envelope.classList.add('opened');
+        const seal = document.getElementById('wax-seal-badge');
+        if (seal) seal.style.opacity = '0';
+        const hint = document.getElementById('envelope-instruction');
+        if (hint) hint.textContent = '✨ Chạm lần nữa vào bức thư để vào cây thông Noel 3D & bật nhạc ✨';
+        enableChristmasMusic();
+      } else {
+        openTreeFromSplashCard();
+      }
+    }
+
+    function enableChristmasMusic() {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        isMusicPlaying = true;
+        document.getElementById('music-label').textContent = 'Tắt nhạc Noel';
+        playJingleBellsLoop();
+      } catch (e) {}
+    }
+
+    function renderQrGreetingCard(targetUrl) {
+      const canvas = document.getElementById('qr-card-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const size = canvas.width;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+
+      if (typeof qrcode === 'function') {
+        try {
+          const qr = qrcode(0, 'L');
+          qr.addData(targetUrl);
+          qr.make();
+          const count = qr.getModuleCount();
+          const pad = 10;
+          const cell = (size - pad * 2) / count;
+          ctx.fillStyle = '#0f172a';
+          for (let r = 0; r < count; r++) {
+            for (let c = 0; c < count; c++) {
+              if (qr.isDark(r, c)) {
+                ctx.fillRect(pad + c * cell, pad + r * cell, Math.ceil(cell), Math.ceil(cell));
+              }
+            }
+          }
+        } catch (err) {}
+      }
+    }
+
+    function downloadQrCardImage() {
+      const canvas = document.getElementById('qr-card-canvas');
+      if (!canvas) return;
+      const link = document.createElement('a');
+      link.download = 'ma-qr-buc-thu-noel.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      showToast('Đã tải ảnh mã QR!');
+    }
+
     // =========================================================================
-    // 4. CÂY THÔNG HẠT ÁNH SÁNG XOẮN ỐC (KHÔNG QUẢ CHÂU) & NGÔI SAO ĐỈNH CÂY
+    // 4. CÂY THÔNG HẠT ÁNH SÁNG XOẮN ỐC & NGÔI SAO ĐỈNH CÂY
     // =========================================================================
     function buildTreeParticles() {
       const theme = COLOR_THEMES[currentThemeIndex];
       const spriteTex = createSoftCircleTexture('rgba(255,255,255,1)', 'rgba(255,255,255,0.45)');
 
-      // 4.600 hạt ánh sáng tán thông
       const count = 4600;
       const positions = new Float32Array(count * 3);
       const colors = new Float32Array(count * 3);
@@ -491,7 +701,6 @@
       treeParticleSystem = new THREE.Points(geo, mat);
       scene.add(treeParticleSystem);
 
-      // Dải ruy-băng ánh sáng vàng kim quấn xoắn ốc quanh cây
       const ribbonCount = 950;
       const rPos = new Float32Array(ribbonCount * 3);
       for (let i = 0; i < ribbonCount; i++) {
@@ -562,7 +771,6 @@
       const starMesh = new THREE.Mesh(starGeo, starMat);
       starGroup.add(starMesh);
 
-      // Hào quang tỏa sáng vừa phải để nổi bật đèn trên thân cây
       const haloTex = createSoftCircleTexture('rgba(254, 240, 138, 0.9)', 'rgba(245, 158, 11, 0.25)');
       const haloSprite = new THREE.Sprite(
         new THREE.SpriteMaterial({
@@ -592,7 +800,6 @@
         metalness: 0.05
       });
 
-      // Thân cây gỗ chắc chắn
       const trunk = new THREE.Mesh(
         new THREE.CylinderGeometry(0.55, 0.78, 2.2, 16),
         new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9 })
@@ -600,7 +807,6 @@
       trunk.position.y = -5.7;
       groundGroup.add(trunk);
 
-      // Đế tuyết tròn dày bồng bềnh
       const baseDisc = new THREE.Mesh(new THREE.CylinderGeometry(8.5, 9.1, 0.75, 48), snowMat);
       baseDisc.position.y = -6.75;
       groundGroup.add(baseDisc);
@@ -610,7 +816,6 @@
       topSnowCap.position.y = -7.85;
       groundGroup.add(topSnowCap);
 
-      // Các ụ tuyết đắp tự nhiên quanh gốc
       for (let i = 0; i < 26; i++) {
         const a = (i / 26) * Math.PI * 2;
         const dist = 3.2 + (i % 4) * 1.35;
@@ -620,7 +825,6 @@
         groundGroup.add(mound);
       }
 
-      // 36 hộp quà thắt nơ chất cao chen chúc 3 tầng quanh gốc cây
       const giftColors = [0xdc2626, 0x16a34a, 0x2563eb, 0xd97706, 0x9333ea, 0xe11d48, 0x0d9488];
       const ribbonColors = [0xfacc15, 0xffffff, 0xf43f5e, 0xfde047];
 
@@ -666,31 +870,26 @@
         groundGroup.add(giftBox);
       }
 
-      // --- GẤU BÔNG TEDDY (BÊN PHẢI GỐC CÂY) ---
       const teddy = buildTeddyBear();
       teddy.position.set(4.5, -6.28, 3.3);
       teddy.rotation.y = -0.45;
       groundGroup.add(teddy);
 
-      // --- GẤU BẮC CỰC (BÊN TRÁI GỐC CÂY) ---
       const polarBear = buildPolarBear();
       polarBear.position.set(-4.5, -6.28, 3.3);
       polarBear.rotation.y = 0.48;
       groundGroup.add(polarBear);
 
-      // --- HÒM THƯ ĐỎ BẮC CỰC CHÂN THỰC (RÌA TRÁI) ---
       const mailbox = buildNorthPoleMailbox();
       mailbox.position.set(-6.3, -6.32, 1.4);
       mailbox.rotation.y = 0.55;
       groundGroup.add(mailbox);
 
-      // --- BIỂN CHỈ DẪN GỖ TUYẾT PHỦ CHÂN THỰC (RÌA PHẢI) ---
       const signpost = buildWoodenSignpost();
       signpost.position.set(6.3, -6.32, 1.4);
       signpost.rotation.y = -0.55;
       groundGroup.add(signpost);
 
-      // --- ĐÔI TẤT GIÁNG SINH TRÊN GỐI TUYẾT ---
       [-1.35, 1.35].forEach((sx, idx) => {
         const sockGroup = new THREE.Group();
         const redMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.65 });
@@ -751,7 +950,6 @@
         group.add(ear, eye, arm, leg);
       });
 
-      // Nón Noel nhỏ trên đầu gấu
       const hatCone = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.65, 16), redMat);
       hatCone.position.set(0.08, 2.08, -0.05);
       hatCone.rotation.z = -0.22;
@@ -817,20 +1015,17 @@
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 2.3, 14), postMat);
       post.position.y = 1.15;
 
-      // Thân hòm thư vòm tròn cổ điển
       const boxBody = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.55, 1.15), redBoxMat);
       boxBody.position.y = 2.35;
       const boxTop = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 1.15, 20), redBoxMat);
       boxTop.rotation.x = Math.PI / 2;
       boxTop.position.y = 2.62;
 
-      // Lá cờ báo thư màu vàng bên hông
       const flagStem = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.45, 0.04), goldMat);
       flagStem.position.set(0.41, 2.75, 0.2);
       const flagHead = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.22), goldMat);
       flagHead.position.set(0.41, 2.92, 0.3);
 
-      // Bảng chữ LETTERS TO SANTA bên hông hòm thư
       const labelCanvas = document.createElement('canvas');
       labelCanvas.width = 256;
       labelCanvas.height = 96;
@@ -854,12 +1049,10 @@
       sideSign.position.set(0.39, 2.38, 0);
       sideSign.rotation.y = Math.PI / 2;
 
-      // Phong bì thư trắng ló ra từ cửa hòm thư
       const letter = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.04, 0.35), snowMat);
       letter.position.set(0, 2.38, 0.62);
       letter.rotation.x = 0.2;
 
-      // Lớp tuyết đọng trên nóc hòm thư
       const snowCap = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.12, 1.12), snowMat);
       snowCap.position.y = 2.98;
 
@@ -930,7 +1123,6 @@
       const eyeBlack = new THREE.MeshStandardMaterial({ color: 0x0f172a });
       const greenWreath = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.7 });
 
-      // --- TUẦN LỘC LIỀN KHỐI MƯỢT MÀ ---
       const deerGroup = new THREE.Group();
       deerGroup.position.set(0, 0.05, 1.55);
 
@@ -1071,7 +1263,6 @@
       deerGroup.add(dBody, dNeck, dChestMane, deerTailMesh, deerHeadGroup);
       reindeerSleighGroup.add(deerGroup);
 
-      // --- XE TRƯỢT TUYẾT CỔ ĐIỂN UỐN CONG CHÂN THỰC ---
       const sleighGroup = new THREE.Group();
       sleighGroup.position.set(0, 0.08, -0.45);
 
@@ -1122,7 +1313,6 @@
         sleighGroup.add(runner, topTrim, strut1, strut2);
       });
 
-      // --- ÔNG GIÀ NOEL NGỒI LÁI XE CHÂN THỰC ---
       const santaSeatGroup = new THREE.Group();
       santaSeatGroup.position.set(0, 0.5, 0.14);
 
@@ -1182,7 +1372,6 @@
       const sPom = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 10), whiteFur);
       sPom.position.set(0, 1.42, -0.15);
 
-      // Hai tay đeo găng trắng cầm dây cương & vẫy chào
       const leftArm = createCapsuleMesh(0.08, 0.34, redSuit);
       leftArm.position.set(-0.34, 0.52, 0.24);
       leftArm.rotation.x = -0.85;
@@ -1199,7 +1388,6 @@
 
       santaSeatGroup.add(sTorso, coatFurTrim, sBelt, sBuckle, sHead, sNose, sMouth, sBeard, sHat, sHatRim, sPom, leftArm, leftGlove, rightArm);
 
-      // Bao quà lớn + hộp quà nhỏ chất sau xe
       const giftSack = new THREE.Mesh(
         new THREE.SphereGeometry(0.38, 16, 16),
         new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.7 })
@@ -1214,7 +1402,6 @@
       smallGift.position.set(0.24, 0.78, -0.44);
       smallGift.rotation.y = 0.3;
 
-      // Dây cương nối từ cổ tuần lộc tới tay Ông Già Noel
       [-0.18, 0.18].forEach(rx => {
         const rein = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.55, 8), goldTrim);
         rein.rotation.x = Math.PI / 2 - 0.15;
@@ -1227,11 +1414,10 @@
       reindeerSleighGroup.scale.setScalar(0.95);
       scene.add(reindeerSleighGroup);
 
-      // --- VỆT SAO BỤI DÀI UỐN CONG LƯỢN SÓNG & NHẤP NHÁY SINH ĐỘNG PHÍA SAU XE ---
       const starTrailCount = 220;
       const trailPositions = new Float32Array(starTrailCount * 3);
       const trailColors = new Float32Array(starTrailCount * 3);
-      const trailSeeds = new Float32Array(starTrailCount * 3); // [spreadR, spreadY, twinklePhase]
+      const trailSeeds = new Float32Array(starTrailCount * 3);
 
       for (let i = 0; i < starTrailCount; i++) {
         const ratio = i / (starTrailCount - 1);
@@ -1258,7 +1444,6 @@
       sleighTrailSystem = new THREE.Points(trailGeo, trailMat);
       scene.add(sleighTrailSystem);
 
-      // --- ĐƯỜNG CHẠY ÁNH SÁNG DÀI UỐN CONG SÁNG KHÚC ĐẦU & TẮT DẦN DƯỚI CHÂN TUẦN LỘC ---
       const roadSegments = 96;
       const roadGeo = new THREE.BufferGeometry();
       roadGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((roadSegments + 1) * 2 * 3), 3));
@@ -1288,7 +1473,6 @@
     // 7. THIỆP DƯỚI GỐC CÂY -> GỌI ÔNG GIÀ NOEL CẦM THIỆP XUẤT HIỆN
     // =========================================================================
     function buildSantaCardInteraction() {
-      // Tấm thiệp Giáng Sinh đặt trên mặt tuyết phía trước gốc cây
       const cardGroup = new THREE.Group();
       const cardMesh = new THREE.Mesh(
         new THREE.BoxGeometry(0.9, 0.65, 0.08),
@@ -1305,7 +1489,6 @@
       clickableObjects.push(cardMesh);
       scene.add(cardGroup);
 
-      // Ông Già Noel 3D cầm thiệp (ẩn sẵn, hiện ra khi bấm vào thiệp dưới gốc)
       santaPresenterGroup = new THREE.Group();
       const redSuit = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.5 });
       const whiteFur = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
@@ -1351,7 +1534,6 @@
         santaPresenterGroup.add(boot);
       });
 
-      // Tấm thiệp phát sáng Ông Già Noel đang giơ ra
       const heldCard = new THREE.Mesh(
         new THREE.BoxGeometry(0.85, 0.62, 0.08),
         new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xf59e0b, emissiveIntensity: 0.45 })
@@ -1386,20 +1568,17 @@
         canvas.height = 430;
         const ctx = canvas.getContext('2d');
 
-        // Khung Polaroid viền kem ánh kim
         ctx.fillStyle = '#fffbeb';
         ctx.fillRect(0, 0, 360, 430);
         ctx.strokeStyle = '#f59e0b';
         ctx.lineWidth = 10;
         ctx.strokeRect(5, 5, 350, 420);
 
-        // Vẽ ảnh căn giữa khung vuông
         const size = Math.min(img.width, img.height);
         const sx = (img.width - size) / 2;
         const sy = (img.height - size) / 2;
         ctx.drawImage(img, sx, sy, size, size, 24, 24, 312, 312);
 
-        // Dòng chú thích nhỏ phía dưới khung Polaroid
         ctx.fillStyle = '#78350f';
         ctx.font = 'italic bold 20px Georgia';
         ctx.textAlign = 'center';
@@ -1553,7 +1732,7 @@
       buildFloatingWishes();
       saveStateToLocal();
       closeModal('modal-wishes');
-      showToast('Đã cập nhật 10 thẻ lời chúc bay quanh cây!');
+      showToast('Đã cập nhật & lưu 10 lời chúc!');
     }
 
     // =========================================================================
@@ -1655,7 +1834,6 @@
         const dx = e.clientX - previousMouse.x;
         const dy = e.clientY - previousMouse.y;
         targetAzimuth -= dx * 0.008;
-        // Cho phép xoay từ gần thẳng đứng trên đỉnh (0.08 rad) xuống ngang tầm gốc (1.82 rad)
         targetPolar = Math.max(0.08, Math.min(1.82, targetPolar - dy * 0.0075));
         previousMouse = { x: e.clientX, y: e.clientY };
       });
@@ -1773,7 +1951,6 @@
       requestAnimationFrame(animate);
       const elapsed = clock.getElapsedTime();
 
-      // Cập nhật camera xoay 360° toàn cầu
       if (autoRotate) {
         targetAzimuth += 0.0028;
       }
@@ -1787,7 +1964,6 @@
       camera.position.z = currentDistance * Math.sin(currentPolar) * Math.cos(currentAzimuth);
       camera.lookAt(0, targetCenterY, 0);
 
-      // Xoay nhẹ hạt ánh sáng & ngôi sao
       if (treeParticleSystem) treeParticleSystem.rotation.y = elapsed * 0.08;
       if (ribbonParticleSystem) ribbonParticleSystem.rotation.y = elapsed * 0.08;
       if (starGroup) {
@@ -1796,7 +1972,6 @@
         starGroup.scale.setScalar(pulse);
       }
 
-      // Tuần lộc & Xe trượt tuyết Ông Già Noel bay vòng quanh cây
       if (reindeerSleighGroup) {
         const orbitAngle = elapsed * 0.42;
         const orbitRadius = 6.85;
@@ -1807,11 +1982,9 @@
           flyY,
           Math.sin(orbitAngle) * orbitRadius
         );
-        // Hướng đầu xe tiếp tuyến với quỹ đạo bay
         reindeerSleighGroup.rotation.y = -orbitAngle;
         reindeerSleighGroup.rotation.z = Math.sin(elapsed * 1.5) * 0.05;
 
-        // Cử động phi nước đại & gật gù đầu tuần lộc + vẫy tay Ông Già Noel
         deerLegs.forEach(leg => {
           leg.rotation.x = Math.sin(elapsed * 7.5 + leg.userData.phase) * 0.55;
         });
@@ -1826,7 +1999,6 @@
           waveArm.rotation.z = -0.75 + Math.sin(elapsed * 5.2) * 0.32;
         }
 
-        // Vệt sao bụi dài uốn cong lượn sóng, sáng rực ở đầu và nhấp nháy tắt dần về cuối
         if (sleighTrailSystem) {
           const tPos = sleighTrailSystem.geometry.attributes.position.array;
           const tCol = sleighTrailSystem.geometry.attributes.color.array;
@@ -1834,11 +2006,10 @@
           const totalPts = tPos.length / 3;
 
           for (let i = 0; i < totalPts; i++) {
-            const ratio = i / (totalPts - 1); // 0 = ngay sát đuôi xe -> 1 = cuối đuôi dài
-            const lag = ratio * 2.35; // Vệt sao kéo dài uốn lượn phía sau
+            const ratio = i / (totalPts - 1);
+            const lag = ratio * 2.35;
             const a = orbitAngle - 0.14 - lag;
 
-            // Độ cong lượn sóng mềm mại theo cả phương ngang & chiều cao
             const waveCurveR = Math.sin(ratio * Math.PI * 3.2 - elapsed * 2.6) * (0.48 * Math.sin(ratio * Math.PI));
             const waveCurveY = Math.cos(ratio * Math.PI * 2.6 - elapsed * 2.2) * (0.34 * Math.sin(ratio * Math.PI));
 
@@ -1853,12 +2024,10 @@
             tPos[i * 3 + 1] = y;
             tPos[i * 3 + 2] = Math.sin(a) * r;
 
-            // Hiệu ứng nhấp nháy lấp lánh từng ngôi sao + sáng mạnh khúc đầu rồi yếu dần
             const fade = Math.pow(1 - ratio, 1.45);
             const twinkle = 0.55 + 0.45 * Math.sin(elapsed * 11.0 + phase + i * 0.35);
             const intensity = fade * twinkle;
 
-            // Chuyển sắc từ trắng rực ở đầu sang vàng kim & ánh lam nhẹ ở đuôi
             tCol[i * 3] = intensity * (1.0 - ratio * 0.08);
             tCol[i * 3 + 1] = intensity * (0.98 - ratio * 0.16);
             tCol[i * 3 + 2] = intensity * (0.92 - ratio * 0.35);
@@ -1867,20 +2036,18 @@
           sleighTrailSystem.geometry.attributes.color.needsUpdate = true;
         }
 
-        // Cập nhật đường chạy ánh sáng dài uốn cong, sáng khúc đầu dưới chân tuần lộc rồi tắt dần
         if (sleighRoadRibbon) {
           const rPos = sleighRoadRibbon.geometry.attributes.position.array;
           const rCol = sleighRoadRibbon.geometry.attributes.color.array;
           const segs = 96;
           for (let i = 0; i <= segs; i++) {
-            const ratio = i / segs; // 0 = ngay dưới chân trước tuần lộc -> 1 = kéo dài mờ tắt phía sau
+            const ratio = i / segs;
             const a = orbitAngle + 0.38 - ratio * 2.45;
             const swayR = Math.sin(ratio * Math.PI * 2.5 - elapsed * 2.0) * (0.28 * ratio);
             const swayY = Math.sin((orbitAngle - ratio * 2.45) * 3.57) * 0.25;
             const centerR = orbitRadius + swayR;
             const roadY = (1.65 + swayY) - 0.62 - ratio * 0.18;
 
-            // Khúc đầu rộng và sáng bừng, thuôn nhọn và tắt dần về cuối
             const halfW = 0.66 * Math.pow(1 - ratio, 0.85);
             const headBoost = Math.sin(Math.min(1, ratio * 7) * (Math.PI / 2));
             const tailFade = Math.pow(1 - ratio, 1.9);
@@ -1899,7 +2066,6 @@
             rPos[idx + 4] = roadY;
             rPos[idx + 5] = Math.sin(a) * outerR;
 
-            // Sáng trắng vàng rực ở khúc đầu, chuyển xanh ánh trăng rồi tắt hẳn
             const rVal = brightness * (1.0 - ratio * 0.25);
             const gVal = brightness * (0.96 - ratio * 0.08);
             const bVal = brightness * 1.0;
@@ -1917,14 +2083,12 @@
         }
       }
 
-      // Hiệu ứng xuất hiện Ông Già Noel cầm thiệp khi bấm vào thiệp dưới gốc
       if (santaPresenterVisible && santaPresenterGroup && santaPresenterProgress < 1) {
         santaPresenterProgress = Math.min(1, santaPresenterProgress + 0.045);
         const ease = 1 - Math.pow(1 - santaPresenterProgress, 3);
         santaPresenterGroup.scale.setScalar(ease);
       }
 
-      // 10 ảnh kỷ niệm bay lơ lửng xoay quanh cây
       photoFrames.forEach(item => {
         item.orbitAngle += item.speed * 0.012;
         item.mesh.position.x = Math.cos(item.orbitAngle) * item.radius;
@@ -1933,7 +2097,6 @@
         item.mesh.lookAt(camera.position);
       });
 
-      // 10 thẻ lời chúc bay lơ lửng quanh cây
       floatingWishes.forEach(item => {
         item.orbitAngle -= item.speed * 0.011;
         item.mesh.position.x = Math.cos(item.orbitAngle) * item.radius;
@@ -1942,7 +2105,6 @@
         item.mesh.lookAt(camera.position);
       });
 
-      // Tuyết rơi nhẹ nhàng
       if (snowSystem) {
         const sArr = snowSystem.geometry.attributes.position.array;
         for (let i = 0; i < sArr.length; i += 3) {
@@ -1963,12 +2125,13 @@
     }
 
     // =========================================================================
-    // 12. SỰ KIỆN NÚT BẤM, NHẠC CHUÔNG NOEL & LƯU / XUẤT LINK
+    // 12. SỰ KIỆN NÚT BẤM, NHẠC CHUÔNG NOEL & LƯU / XUẤT THIỆP QR
     // =========================================================================
     document.getElementById('btn-theme').addEventListener('click', () => {
       currentThemeIndex = (currentThemeIndex + 1) % COLOR_THEMES.length;
       document.getElementById('theme-label').textContent = 'Sắc đèn: ' + COLOR_THEMES[currentThemeIndex].name;
       buildTreeParticles();
+      saveStateToLocal();
     });
 
     document.getElementById('btn-toggle-hud').addEventListener('click', () => {
@@ -1985,7 +2148,6 @@
       document.getElementById('btn-show-hud').classList.add('hidden');
     });
 
-    // Tải ảnh kỷ niệm lên (tối đa 10 ảnh)
     document.getElementById('photo-upload').addEventListener('change', e => {
       const files = Array.from(e.target.files || []);
       const customWish = document.getElementById('photo-wish-input').value.trim();
@@ -2005,14 +2167,15 @@
       e.target.value = '';
     });
 
-    // Nền không gian
-    function setPresetBackground(preset) {
+    function setPresetBackground(preset, skipSave = false) {
+      currentBgPreset = preset || 'night';
       const bg = document.getElementById('bg-layer');
       bg.style.backgroundImage = 'none';
-      if (preset === 'night') bg.style.background = 'radial-gradient(circle at 50% 42%, #0c1936 0%, #050a18 58%, #02040a 100%)';
-      if (preset === 'warm') bg.style.background = 'radial-gradient(circle at 50% 45%, #451a03 0%, #1c0a00 62%, #090300 100%)';
-      if (preset === 'aurora') bg.style.background = 'radial-gradient(circle at 50% 35%, #064e3b 0%, #022c22 52%, #020617 100%)';
-      if (preset === 'royal') bg.style.background = 'radial-gradient(circle at 50% 42%, #4c0519 0%, #1f030d 60%, #070104 100%)';
+      if (currentBgPreset === 'night') bg.style.background = 'radial-gradient(circle at 50% 42%, #0c1936 0%, #050a18 58%, #02040a 100%)';
+      if (currentBgPreset === 'warm') bg.style.background = 'radial-gradient(circle at 50% 45%, #451a03 0%, #1c0a00 62%, #090300 100%)';
+      if (currentBgPreset === 'aurora') bg.style.background = 'radial-gradient(circle at 50% 35%, #064e3b 0%, #022c22 52%, #020617 100%)';
+      if (currentBgPreset === 'royal') bg.style.background = 'radial-gradient(circle at 50% 42%, #4c0519 0%, #1f030d 60%, #070104 100%)';
+      if (!skipSave) saveStateToLocal();
     }
 
     document.getElementById('bg-upload').addEventListener('change', e => {
@@ -2033,7 +2196,6 @@
       document.getElementById('bg-overlay').style.background = `rgba(2, 6, 23, ${v / 100})`;
     });
 
-    // Nhạc chuông hộp nhạc Jingle Bells bằng Web Audio API
     let audioCtx = null;
     let isMusicPlaying = false;
     let musicTimer = null;
@@ -2044,11 +2206,7 @@
         clearInterval(musicTimer);
         document.getElementById('music-label').textContent = 'Bật nhạc Noel';
       } else {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        isMusicPlaying = true;
-        document.getElementById('music-label').textContent = 'Tắt nhạc Noel';
-        playJingleBellsLoop();
+        enableChristmasMusic();
       }
     });
 
@@ -2085,12 +2243,13 @@
       }, 340);
     }
 
-    // Lưu cấu hình & Xuất link chỉ-xem (?view=1)
     function saveStateToLocal() {
       try {
         const state = {
           wishes: wishTexts,
           stickers: treeStickers.map(s => s.emoji),
+          themeIndex: currentThemeIndex,
+          bgPreset: currentBgPreset,
           photos: photoFrames.map(p => ({ url: p.imageUrl, wish: p.wish }))
         };
         localStorage.setItem('noel_3d_state_v1', JSON.stringify(state));
@@ -2098,52 +2257,94 @@
     }
 
     function loadSavedStateOrDefaults() {
-      try {
-        const raw = localStorage.getItem('noel_3d_state_v1');
-        if (raw) {
-          const st = JSON.parse(raw);
-          if (Array.isArray(st.wishes) && st.wishes.length) {
-            wishTexts = st.wishes;
+      let loadedPhotos = false;
+
+      const encodedData = urlParams.get('d');
+      if (encodedData) {
+        const decoded = decodePayloadFromUrl(encodedData);
+        if (decoded) {
+          if (Array.isArray(decoded.w) && decoded.w.length) {
+            wishTexts = decoded.w;
             buildFloatingWishes();
           }
-          if (Array.isArray(st.stickers)) {
-            st.stickers.forEach(em => addStickerEvenlyToTree(em));
+          if (Array.isArray(decoded.s)) {
+            decoded.s.forEach(em => addStickerEvenlyToTree(em));
           }
-          if (Array.isArray(st.photos) && st.photos.length) {
-            st.photos.forEach(p => addPhotoFrameToTree(p.url, p.wish));
-            return;
+          if (typeof decoded.t === 'number' && COLOR_THEMES[decoded.t]) {
+            currentThemeIndex = decoded.t;
+            document.getElementById('theme-label').textContent = 'Sắc đèn: ' + COLOR_THEMES[currentThemeIndex].name;
+            buildTreeParticles();
+          }
+          if (typeof decoded.b === 'string') {
+            setPresetBackground(decoded.b, true);
           }
         }
-      } catch (e) {}
+      } else {
+        try {
+          const raw = localStorage.getItem('noel_3d_state_v1');
+          if (raw) {
+            const st = JSON.parse(raw);
+            if (Array.isArray(st.wishes) && st.wishes.length) {
+              wishTexts = st.wishes;
+              buildFloatingWishes();
+            }
+            if (Array.isArray(st.stickers)) {
+              st.stickers.forEach(em => addStickerEvenlyToTree(em));
+            }
+            if (typeof st.themeIndex === 'number' && COLOR_THEMES[st.themeIndex]) {
+              currentThemeIndex = st.themeIndex;
+              document.getElementById('theme-label').textContent = 'Sắc đèn: ' + COLOR_THEMES[currentThemeIndex].name;
+              buildTreeParticles();
+            }
+            if (typeof st.bgPreset === 'string') {
+              setPresetBackground(st.bgPreset, true);
+            }
+            if (Array.isArray(st.photos) && st.photos.length) {
+              st.photos.forEach(p => addPhotoFrameToTree(p.url, p.wish));
+              loadedPhotos = true;
+            }
+          }
+        } catch (e) {}
+      }
 
-      // 3 ảnh mẫu mặc định ban đầu
-      const samples = [
-        { text: 'Giáng Sinh An Lành 🎄', bg: '#7f1d1d', wish: 'Chúc bạn một mùa Giáng Sinh ấm áp bên gia đình!' },
-        { text: 'Khoảnh Khắc Vui ✨', bg: '#14532d', wish: 'Mọi điều ước tốt đẹp nhất sẽ đến với bạn!' },
-        { text: 'Mùa Đông Yêu Thương ❤️', bg: '#1e3a8a', wish: 'Luôn hạnh phúc và rạng rỡ nhé!' }
-      ];
-      samples.forEach(s => {
-        const c = document.createElement('canvas');
-        c.width = 300;
-        c.height = 300;
-        const ctx = c.getContext('2d');
-        ctx.fillStyle = s.bg;
-        ctx.fillRect(0, 0, 300, 300);
-        ctx.fillStyle = '#fef08a';
-        ctx.font = 'bold 26px Georgia';
-        ctx.textAlign = 'center';
-        ctx.fillText(s.text, 150, 155);
-        addPhotoFrameToTree(c.toDataURL(), s.wish);
-      });
+      if (!loadedPhotos) {
+        const samples = [
+          { text: 'Giáng Sinh An Lành 🎄', bg: '#7f1d1d', wish: 'Chúc bạn một mùa Giáng Sinh ấm áp bên gia đình!' },
+          { text: 'Khoảnh Khắc Vui ✨', bg: '#14532d', wish: 'Mọi điều ước tốt đẹp nhất sẽ đến với bạn!' },
+          { text: 'Mùa Đông Yêu Thương ❤️', bg: '#1e3a8a', wish: 'Luôn hạnh phúc và rạng rỡ nhé!' }
+        ];
+        samples.forEach(s => {
+          const c = document.createElement('canvas');
+          c.width = 300;
+          c.height = 300;
+          const ctx = c.getContext('2d');
+          ctx.fillStyle = s.bg;
+          ctx.fillRect(0, 0, 300, 300);
+          ctx.fillStyle = '#fef08a';
+          ctx.font = 'bold 26px Georgia';
+          ctx.textAlign = 'center';
+          ctx.fillText(s.text, 150, 155);
+          addPhotoFrameToTree(c.toDataURL(), s.wish);
+        });
+      }
     }
 
     document.getElementById('btn-share-link').addEventListener('click', () => {
       saveStateToLocal();
       const base = window.location.href.split('?')[0];
-      const viewUrl = base + '?view=1';
+      const payload = {
+        w: wishTexts.filter(w => w && w.trim().length > 0),
+        s: treeStickers.map(s => s.emoji),
+        t: currentThemeIndex,
+        b: currentBgPreset
+      };
+      const encoded = encodePayloadForUrl(payload);
+      const viewUrl = encoded ? `${base}?view=1&card=1&d=${encoded}` : `${base}?view=1&card=1`;
       document.getElementById('share-url-input').value = viewUrl;
       document.getElementById('copy-feedback').classList.add('hidden');
+      renderQrGreetingCard(viewUrl);
       openModal('modal-share');
+      showToast('Đã lưu chỉnh sửa & xuất thiệp kèm mã QR!');
     });
 
     function copyShareUrl() {
